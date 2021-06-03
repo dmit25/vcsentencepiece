@@ -15,11 +15,15 @@
 #ifndef SENTENCEPIECE_PROCESSOR_H_
 #define SENTENCEPIECE_PROCESSOR_H_
 
+#include <codecvt>
 #include <cstring>
+#include <iostream>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
+
 
 #if defined(_USE_INTERNAL_STRING_VIEW)
 #include "third_party/absl/strings/string_view.h"
@@ -513,4 +517,99 @@ util::Status SaveModelProto(absl::string_view filename,
 }  // namespace io
 #endif  // SWIG
 }  // namespace sentencepiece
+
+
+#ifndef SENTENCEPIECE_PROCESSOR_C_H_
+#define SENTENCEPIECE_PROCESSOR_C_H_
+#include <comdef.h>
+#include <comutil.h>
+
+extern "C" __declspec(dllexport) inline sentencepiece::SentencePieceProcessor * CreateProcessor()
+{
+    return new sentencepiece::SentencePieceProcessor();
+}
+
+extern "C" __declspec(dllexport) inline int Load(
+    sentencepiece::SentencePieceProcessor * processor, const wchar_t* path)
+{
+    if (processor != nullptr)
+    {
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        const auto converted_str = converter.to_bytes(path);
+        const auto status = processor->Load(converted_str).code();
+        return static_cast<int>(status);
+    }
+    return -1;
+}
+
+extern "C" __declspec(dllexport) inline BSTR Nothing(const wchar_t* input) {
+    return SysAllocString(input);
+}
+
+extern "C" __declspec(dllexport) inline BSTR Encode(
+    sentencepiece::SentencePieceProcessor * processor, const wchar_t* input)
+{
+    if (processor != nullptr)
+    {
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        const auto converted_str = converter.to_bytes(input);
+    	
+        std::vector<std::string> pieces;
+        processor->Encode(converted_str, &pieces);
+        const std::string concat = std::accumulate(
+            std::begin(pieces) + 1,
+            std::end(pieces),
+            pieces[0],
+            [](std::string s0, std::string const& s1) { return s0 += " " + s1; });
+        const auto wresult = converter.from_bytes(concat);
+        return SysAllocString(wresult.c_str());
+    }
+    return nullptr;
+}
+
+extern "C" __declspec(dllexport) inline BSTR Decode(
+    sentencepiece::SentencePieceProcessor * processor, const wchar_t* input)
+{
+    if (processor != nullptr)
+    {
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        const auto converted_str = converter.to_bytes(input);
+        std::vector<std::string> pieces;
+
+        std::string temp = "";
+        for (int i = 0; i < converted_str.length(); ++i) {
+
+            if (converted_str[i] == ' ') {
+                pieces.push_back(temp);
+                temp = "";
+            }
+            else {
+                temp.push_back(converted_str[i]);
+            }
+
+        }
+        if (temp.length() > 0) {
+            pieces.push_back(temp);
+        }
+    	
+        std::string decoded;
+        processor->Decode(pieces, &decoded);
+        const auto wresult = converter.from_bytes(decoded);
+        return SysAllocString(wresult.c_str());
+    }
+    return nullptr;
+}
+
+extern "C" __declspec(dllexport) inline void DisposeProcessor(
+    sentencepiece::SentencePieceProcessor * processor)
+{
+    if (processor != nullptr)
+    {
+        delete processor;
+        processor = nullptr;
+    }
+}
+#endif  // SENTENCEPIECE_PROCESSOR_C_H_
 #endif  // SENTENCEPIECE_PROCESSOR_H_
+
+

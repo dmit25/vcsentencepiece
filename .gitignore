@@ -6,6 +6,7 @@ Makefile.in
 /test-driver
 /ylwrap
 /build
+.idea/**
 
 /autom4te.cache
 /autoscan.log
