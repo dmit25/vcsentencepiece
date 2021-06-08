@@ -831,3 +831,96 @@ util::Status SaveModelProto(absl::string_view filename,
 
 }  // namespace io
 }  // namespace sentencepiece
+
+#include <iostream>
+#include <string>
+#include <codecvt>
+#include <cassert>
+#include <locale>
+sentencepiece::SentencePieceProcessor * CreateProcessor()
+{
+    return new sentencepiece::SentencePieceProcessor();
+}
+
+int Load(sentencepiece::SentencePieceProcessor * processor, const char* path)
+{
+    if (processor != nullptr)
+    {
+        const auto status = processor->Load(path).code();
+        return static_cast<int>(status);
+    }
+    return -1;
+}
+
+char* Nothing(const char* input) {
+    auto converted_str = std::string(input);
+    converted_str = converted_str + " " + converted_str;
+    char* result = (char*)TP_CoTaskMemAlloc(converted_str.length()+1);
+    strcpy(result,converted_str.c_str());
+    return result;
+}
+
+char* Encode(
+        sentencepiece::SentencePieceProcessor * processor, const char* input)
+{
+    if (processor != nullptr)
+    {
+        std::vector<std::string> pieces;
+        processor->Encode(input, &pieces);
+        if(pieces.size() == 0){
+            return nullptr;
+        }
+        auto concat = std::accumulate(
+                std::next(pieces.begin()),
+                std::end(pieces),
+                pieces[0],
+                [](std::string a, std::string b) { return a + " " + b; });
+        char* result = (char*)TP_CoTaskMemAlloc(concat.length()+1);
+        strcpy(result,concat.c_str());
+        return result;
+    }
+    return nullptr;
+}
+
+char* Decode(
+        sentencepiece::SentencePieceProcessor * processor, const char* input)
+{
+    if (processor != nullptr)
+    {
+        const auto converted_str = std::string(input);
+        std::vector<std::string> pieces;
+
+        std::string temp = "";
+        for (int i = 0; i < converted_str.length(); ++i) {
+
+            if (converted_str[i] == ' ') {
+                pieces.push_back(temp);
+                temp = "";
+            }
+            else {
+                temp.push_back(converted_str[i]);
+            }
+
+        }
+        if (temp.length() > 0) {
+            pieces.push_back(temp);
+        }
+
+        std::string decoded;
+        processor->Decode(pieces, &decoded);
+        char* result = (char*)TP_CoTaskMemAlloc(decoded.length()+1);
+        strcpy(result,decoded.c_str());
+        return result;
+    }
+    return nullptr;
+}
+
+void DisposeProcessor(
+        sentencepiece::SentencePieceProcessor * processor)
+{
+    if (processor != nullptr)
+    {
+        delete processor;
+        processor = nullptr;
+    }
+}
