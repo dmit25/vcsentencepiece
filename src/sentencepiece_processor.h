@@ -534,27 +534,20 @@ util::Status SaveModelProto(absl::string_view filename,
 //
 // types and constants
 //
-#ifdef WINDOWS
-#include <windows.h>
-
-#define FS_SEPERATOR L"\\"
-#define PATH_DELIMITER L";"
-#define L(t) L##t
-
-
-typedef unsigned error_t;
-typedef HANDLE THREAD_ID;
+#ifdef WIN32
 
 #define DLL_EXPORT __declspec(dllexport)
+#define TP_LoadLibrary(l) LoadLibrary(l)
+#define TP_LoadLibraryW(l) LoadLibraryW(l)
+#define TP_LoadLibraryA(l) LoadLibraryA(l)
+#define TP_GetProcAddress(m,e) GetProcAddress(m,e)
+#define TP_CoTaskMemAlloc(t) CoTaskMemAlloc(t)
+#define TP_CoTaskMemFree(t) CoTaskMemFree(t)
+#define TP_DebugBreak() DebugBreak()
+#define TP_rand rand
+#define TP_srand srand
 
 #else // !WINDOWS
-#include <pthread.h>
-
-typedef char16_t WCHAR;
-typedef unsigned long DWORD;
-typedef int BOOL;
-typedef WCHAR *LPWSTR, *PWSTR;
-typedef const WCHAR *LPCWSTR, *PCWSTR;
 
 #ifndef TRUE
 #define TRUE 1
@@ -584,63 +577,6 @@ typedef const WCHAR *LPCWSTR, *PCWSTR;
 #define DLL_EXPORT
 #endif
 
-#define FS_SEPERATOR L("/")
-#define PATH_DELIMITER L(":")
-#define MAX_PATH 260
-
-typedef pthread_t THREAD_ID;
-typedef void* (*MacWorker)(void*);
-typedef DWORD __stdcall (*LPTHREAD_START_ROUTINE)(void*);
-#ifdef UNICODE
-typedef WCHAR TCHAR;
-#else // ANSI
-typedef char TCHAR;
-#endif // UNICODE
-typedef char* LPSTR;
-typedef const char* LPCSTR;
-typedef TCHAR* LPTSTR;
-typedef const TCHAR* LPCTSTR;
-typedef void* FARPROC;
-typedef void* HMODULE;
-typedef void* ULONG_PTR;
-typedef void* LPVOID;
-typedef unsigned char BYTE;
-typedef WCHAR OLECHAR;
-#endif
-
-//
-// Method declarations
-//
-error_t TP_scpy_s(LPWSTR strDestination, size_t sizeInWords, LPCWSTR strSource);
-error_t TP_scat_s(LPWSTR strDestination, size_t sizeInWords, LPCWSTR strSource);
-int TP_slen(LPWSTR str);
-int TP_scmp_s(LPCSTR str1, LPCSTR str2);
-int TP_wcmp_s(LPWSTR str1, LPWSTR str2);
-error_t TP_getenv_s(size_t* pReturnValue, LPWSTR buffer, size_t sizeInWords, LPCWSTR varname);
-error_t TP_putenv_s(LPTSTR name, LPTSTR value);
-void TP_ZeroMemory(LPVOID buffer, size_t sizeInBytes);
-error_t TP_itow_s(int num, LPWSTR buffer, size_t sizeInCharacters, int radix);
-LPWSTR TP_sstr(LPWSTR str, LPWSTR searchStr);
-LPSTR  HackyConvertToSTR(LPWSTR pwszInput);
-DWORD TP_CreateThread(THREAD_ID* tThread, LPTHREAD_START_ROUTINE worker,  LPVOID lpParameter);
-void TP_JoinThread(THREAD_ID tThread);
-void TP_DebugBreak();
-DWORD TP_GetFullPathName(LPWSTR fileName, DWORD nBufferLength, LPWSTR lpBuffer);
-
-//
-// Method redirects
-//
-#ifdef WINDOWS
-#define TP_LoadLibrary(l) LoadLibrary(l)
-#define TP_LoadLibraryW(l) LoadLibraryW(l)
-#define TP_LoadLibraryA(l) LoadLibraryA(l)
-#define TP_GetProcAddress(m,e) GetProcAddress(m,e)
-#define TP_CoTaskMemAlloc(t) CoTaskMemAlloc(t)
-#define TP_CoTaskMemFree(t) CoTaskMemFree(t)
-#define TP_DebugBreak() DebugBreak()
-#define TP_rand rand
-#define TP_srand srand
-#else
 #define fopen_s(FILEHANDLE, FILENAME, MODE) *(FILEHANDLE) = fopen(FILENAME, MODE)
 #define _fsopen(FILENAME, MODE, ACCESS) fopen(FILENAME, MODE)
 #define GetCurrentDirectory(BUFSIZ, BUF) getcwd(BUF, BUFSIZ)
