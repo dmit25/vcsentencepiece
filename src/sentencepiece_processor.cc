@@ -866,7 +866,11 @@ char* Encode(
     if (processor != nullptr)
     {
         std::vector<std::string> pieces;
-        processor->Encode(input, &pieces);
+        const auto result_status = processor->Encode(input, &pieces);
+        if (result_status.code() != sentencepiece::util::StatusCode::kOk)
+        {
+            return nullptr;
+        }
         if(pieces.size() == 0){
             return nullptr;
         }
@@ -907,7 +911,11 @@ char* Decode(
         }
 
         std::string decoded;
-        processor->Decode(pieces, &decoded);
+        const auto result_status = processor->Decode(pieces, &decoded);
+    	if(result_status.code() != sentencepiece::util::StatusCode::kOk)
+    	{
+    		return nullptr;
+    	}
         char* result = (char*)TP_CoTaskMemAlloc(decoded.length()+1);
         strcpy(result,decoded.c_str());
         return result;
